@@ -5,7 +5,7 @@ from base import *
 import parser
 from utils import *
 
-############## внутренние методы
+# ############# внутренние методы
 
 
 def update_all_users_info():
@@ -92,7 +92,27 @@ def check_user_exists(nick):
         return False
 
 
-####### Методы для отдачи в апи
+def add_posts_to_base(posts):
+    s = Session()
+    for post in posts:
+        try:
+            s.add(Post(post_id=post['post_id'],
+                       parent=post['parent'],
+                       main=post['main'],
+                       local_main=post['local_main'],
+                       subject=post['subject'],
+                       date=post['date'],
+                       user=post['user'],
+                       board=post['board'],
+                       body=post['body'],
+                       archive=post['archive']))
+            s.commit()
+        except Exception:
+            s.rollback()
+    s.close()
+
+
+# ###### Методы для отдачи в апи
 def get_user_info(nick):
     s = Session()
     u = s.query(User).get(nick)
@@ -104,8 +124,18 @@ def get_user_info(nick):
 
 
 def get_threads_list(board, page):
-    #в перспективе брать из базы
+    # в перспективе брать из базы
     return parser.get_threads_list_by_board(board, page)
+
+
+def get_thread(main, page):
+    if page == 'all':
+        posts = parser.thread_posts_by_page(main, page)
+    else:
+        posts = parser.thread_posts_by_page(main, int(page) * 20)
+    if posts:
+        add_posts_to_base(posts)
+    return posts
 
 
 def get_post(post_id):
@@ -114,26 +144,12 @@ def get_post(post_id):
     if not p:
         posts = parser.thread_posts_by_id(post_id)
         if posts:
-            for post in posts:
-                try:
-                    s.add(Post(post_id=post['post_id'],
-                               parent=post['parent'],
-                               main=post['main'],
-                               local_main=post['local_main'],
-                               subject=post['subject'],
-                               date=post['date'],
-                               user=post['user'],
-                               board=post['board'],
-                               body=post['body'],
-                               archive=post['archive']))
-                    s.commit()
-                except Exception:
-                    s.rollback()
+            add_posts_to_base(posts)
         p = s.query(Post).get(post_id)
     if p:
         return {i: p.__dict__[i] for i in p.__dict__ if i != '_sa_instance_state'}
     else:
-        return {'Error': 'User does not exist!'}
+        return {'Error': 'Post does not exist!'}
 
 
 def post_reply(post_id, body, cookies, subject=None, layer=0, icon='book.gif'):

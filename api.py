@@ -13,6 +13,9 @@ def normalize(answer):
         for i in answer:
             if type(answer[i]) == datetime:
                 answer[i] = int(answer[i].timestamp())
+    elif isinstance(answer, list):
+        for i in answer:
+            normalize(i)
     response.content_type = 'application/json'
     return str(answer)
 
@@ -50,12 +53,15 @@ def rating_post(post_id, rating):
 
 @route('/threadslist/<board>/<page:int>')
 def get_threads(board, page=0):
-    try:
-        threads = methods.get_threads_list(board, page)
-        return normalize(threads)
-    except Exception as err:
-        return {'Error': err}
+    threads = methods.get_threads_list(board, page)
+    return normalize(threads)
 
+
+
+@route('/thread/<main:int>/<page:re:(all|[0-9]+)>')
+def get_thread_page(main, page):
+    posts = methods.get_thread(main, page)
+    return normalize(posts)
 
 if __name__ == '__main__':
     run(host='localhost', port=10001, debug=True)

@@ -26,6 +26,7 @@ forum_url = "http://forumlocal.ru/"
 user_page = "showprofile.php?Cat=&User=%s&page=1&what=showmembers"
 user_list_page = "showmembers.php?Cat=&sb=14&page=%i"
 post_request_page = "showflat.php?Cat=&Board=soft&Number=%i&showlite="
+thread_page = "showflat.php?Number=%i&tistart=%s"
 threads_list_page = "postlist.php?Cat=&Board=%s&page=%i&showlite=l"
 reply_form_page = "newreply.php?Cat=&Number=%i&fullview=&src=pt&what=showflat&o=&vc=1&showlite="
 reply_post_url = 'addpost.php?showlite='
@@ -114,13 +115,16 @@ def user_list_by_page(page_number):
     return user_list
 
 
-@timer
+def thread_posts_by_page(main, page):
+    return get_all_posts_from_page(thread_page % (main, page))
+
+
 def thread_posts_by_id(post_id):
-    posts = get_all_posts_from_page(post_request_page % post_id)
-    return posts
+    return get_all_posts_from_page(post_request_page % post_id)
 
 
 def get_all_posts_from_page(request_page):
+    log.debug('Request posts from %s' % request_page)
     parse_page = requests.get(forum_url + request_page)
     parse_page.connection.close()
     parsed_page = BeautifulSoup(parse_page.content.decode('cp1251'))
@@ -153,11 +157,16 @@ def get_all_posts_from_page(request_page):
             post['body'] = ''.join([str(x) for x in p[i+1].tr.font if str(x).find('<font class="small"><a href="/')])
 
             try:
-                post['parent'] = p[i].find('td', {'class': 'subjecttable'}).table.tr.td.font.a['href'].split('&')[2].lstrip('Number=')
-                post['date'] = datetime.fromtimestamp(time.mktime(time.strptime(p[i].find('td', {'class': 'subjecttable'}).table.tr.td.find_all('font')[1].text.strip(), "%d.%m.%Y %H:%M")))
+                post['parent'] = p[i].find('td', {'class': 'subjecttable'}).table.tr.td.font.a['href'].split('&')[
+                    2].lstrip('Number=')
+                post['date'] = datetime.fromtimestamp(time.mktime(time.strptime(
+                    p[i].find('td', {'class': 'subjecttable'}).table.tr.td.find_all('font')[1].text.strip(),
+                    "%d.%m.%Y %H:%M")))
             except:
                 post['parent'] = 0
-                post['date'] = datetime.fromtimestamp(time.mktime(time.strptime(p[i].find('td', {'class': 'subjecttable'}).table.tr.td.font.text.strip(), "%d.%m.%Y %H:%M")))
+                post['date'] = datetime.fromtimestamp(time.mktime(
+                    time.strptime(p[i].find('td', {'class': 'subjecttable'}).table.tr.td.font.text.strip(),
+                                  "%d.%m.%Y %H:%M")))
         except:
             post = {}
         i += 2

@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
+
 import time
+import configparser
 import logging as log
+
+config = configparser.ConfigParser()
+config.read('config.cfg')
+
 log.basicConfig(format='%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
-                level=log.INFO,
-                filename='../forum_application.log')
+                level=log._nameToLevel[config['log']['log_level']],
+                filename='application.log')
+
 
 def timer(f):
     def tmp(*args, **kwargs):
